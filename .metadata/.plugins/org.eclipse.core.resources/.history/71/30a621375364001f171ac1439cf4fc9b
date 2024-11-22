@@ -1,0 +1,301 @@
+
+
+//*********************************STABLE_CODE_STABLE_PWM_DETECT & CLASSIFICATION**************************************
+
+
+
+//
+//#include <stdio.h>
+//#include "mxc_device.h"
+//#include "gpio.h"
+//#include "tmr.h"
+//#include "nvic_table.h"
+//#include "mxc_delay.h"
+//#include "uart.h"
+//
+//#define PWM_INPUT_PIN      13  // This is P0_2, connected to the PWM signal
+//#define TMR_IDX            0  // Use Timer 0
+//
+//volatile uint32_t risingEdge1 = 0, fallingEdge = 0, period = 0;
+//volatile uint32_t highTime = 0;
+//volatile float dutyCycle = 0.0;
+//volatile int measurementReady = 0;
+//volatile int currentClass = -1;
+//
+//void PWM_Handler(void* cbdata);
+//
+//void GPIO_Init(void) {
+//    mxc_gpio_cfg_t gpio_cfg_pwm = {
+//        .port = MXC_GPIO0,
+//        .mask = (1 << PWM_INPUT_PIN),
+//        .pad = MXC_GPIO_PAD_NONE,
+//        .func = MXC_GPIO_FUNC_IN
+//    };
+//    MXC_GPIO_Config(&gpio_cfg_pwm);
+//
+//    // Register and enable interrupts
+//    MXC_GPIO_RegisterCallback(&gpio_cfg_pwm, PWM_Handler, NULL);
+//    MXC_GPIO_IntConfig(&gpio_cfg_pwm, MXC_GPIO_INT_BOTH);
+//    MXC_GPIO_EnableInt(gpio_cfg_pwm.port, gpio_cfg_pwm.mask);
+//
+//    NVIC_EnableIRQ(MXC_GPIO_GET_IRQ(MXC_GPIO_GET_IDX(MXC_GPIO0)));
+//}
+//
+//void Timer_Init(void) {
+//    mxc_tmr_cfg_t tmr_cfg;
+//
+//    MXC_TMR_Stop(MXC_TMR_GET_TMR(TMR_IDX));
+//
+//    tmr_cfg.pres = MXC_TMR_PRES_1;
+//    tmr_cfg.mode = MXC_TMR_MODE_CONTINUOUS;
+//    tmr_cfg.cmp_cnt = 0;
+//    tmr_cfg.pol = 0;
+//
+//    MXC_TMR_Init(MXC_TMR_GET_TMR(TMR_IDX), &tmr_cfg);
+//    MXC_TMR_Start(MXC_TMR_GET_TMR(TMR_IDX));
+//}
+//
+//void PWM_Handler(void* cbdata) {
+//    uint32_t current_time = MXC_TMR_GetCount(MXC_TMR_GET_TMR(TMR_IDX));
+//
+//    if (MXC_GPIO_InGet(MXC_GPIO0, (1 << PWM_INPUT_PIN))) {
+//        if (risingEdge1 == 0) {
+//            risingEdge1 = current_time;
+//        } else {
+//            period = current_time - risingEdge1;
+//            risingEdge1 = current_time;
+//            measurementReady = 1;
+//        }
+//    } else {
+//        fallingEdge = current_time;
+//        highTime = fallingEdge - risingEdge1;
+//    }
+//}
+//
+//void Process_PWM(void) {
+//    if (measurementReady) {
+//        measurementReady = 0;
+//
+//        dutyCycle = ((float)highTime / period) * 100.0;
+//
+//        // Handle possible high duty cycles (near 90%)
+//        if (dutyCycle > 95.0) {
+//            dutyCycle = 90.0;
+//        }
+//
+//        // Define ranges based on the new logic (I used 4 units)
+//        const float requiredDutyCycleRanges[4][2] = {
+//            {23.0, 28.0},  // 25% duty cycle range
+//            {48.0, 53.0},  // 50% duty cycle range
+//            {73.0, 78.0},  // 75% duty cycle range
+//            {88.0, 92.0}   // 90% duty cycle range
+//        };
+//
+//        // Classification logic
+//        for (int i = 0; i < 4; i++) {
+//            if (dutyCycle >= requiredDutyCycleRanges[i][0] && dutyCycle <= requiredDutyCycleRanges[i][1]) {
+//                if (i != currentClass) {
+//                    float classifiedDuty = (i + 1) * 22.5;
+//                    if (i == 0) classifiedDuty = 25;
+//                    if (i == 1) classifiedDuty = 50;
+//                    if (i == 2) classifiedDuty = 75;
+//                    if (i == 3) classifiedDuty = 90;
+//
+//                    //printf("Measured Duty Cycle: %.2f%%\n", dutyCycle);
+//                    printf("----------  ");
+//                    printf("Captured Duty Cycle =====>> %.0f%% duty cycle\n", classifiedDuty);
+//                    currentClass = i;
+//                }
+//                break;
+//            }
+//        }
+//    }
+//}
+//
+//int main(void) {
+//    GPIO_Init();
+//    Timer_Init();
+//
+//    // Initial classification right after start
+//    printf("STARING_____ AT :--> \n\t");
+//    Process_PWM();
+//
+//    while (1) {
+//        Process_PWM();
+//        MXC_Delay(MXC_DELAY_MSEC(250));
+//    }
+//
+//    return 0;
+//}
+
+
+//==================================================================================================================
+
+
+
+
+
+#include "board.h"
+
+#include <stdio.h>
+#include "mxc_device.h"
+#include "gpio.h"
+#include "tmr.h"
+#include "nvic_table.h"
+#include "mxc_delay.h"
+#include "uart.h"
+
+#define PWM_INPUT_PIN      13  // P0_13 connected to the PWM signal
+#define TMR_IDX            0   // Use Timer 0
+
+#define BUFFER_SIZE        14  // Buffer size to capture 14 events
+
+volatile uint32_t risingEdge1 = 0, fallingEdge = 0, period = 0;
+volatile uint32_t highTime = 0;
+volatile float dutyCycle = 0.0;
+volatile int measurementReady = 0;
+volatile int buffer[BUFFER_SIZE];  // Buffer to store the captured events
+volatile int bufferIndex = 0;      // Current index in the buffer
+volatile int bufferReady = 0;      // Flag indicating buffer is ready for processing
+
+void PWM_Handler(void* cbdata);
+
+void GPIO_Init(void) {
+    mxc_gpio_cfg_t gpio_cfg_pwm = {
+        .port = MXC_GPIO0,
+        .mask = (1 << PWM_INPUT_PIN),
+        .pad = MXC_GPIO_PAD_NONE,
+        .func = MXC_GPIO_FUNC_IN
+    };
+    MXC_GPIO_Config(&gpio_cfg_pwm);
+
+    // Register and enable interrupts
+    MXC_GPIO_RegisterCallback(&gpio_cfg_pwm, PWM_Handler, NULL);
+    MXC_GPIO_IntConfig(&gpio_cfg_pwm, MXC_GPIO_INT_BOTH);
+    MXC_GPIO_EnableInt(gpio_cfg_pwm.port, gpio_cfg_pwm.mask);
+
+    NVIC_EnableIRQ(MXC_GPIO_GET_IRQ(MXC_GPIO_GET_IDX(MXC_GPIO0)));
+}
+
+void Timer_Init(void) {
+    mxc_tmr_cfg_t tmr_cfg;
+
+    MXC_TMR_Stop(MXC_TMR_GET_TMR(TMR_IDX));
+
+    tmr_cfg.pres = MXC_TMR_PRES_1;
+    tmr_cfg.mode = MXC_TMR_MODE_CONTINUOUS;
+    tmr_cfg.cmp_cnt = 0;
+    tmr_cfg.pol = 0;
+
+    MXC_TMR_Init(MXC_TMR_GET_TMR(TMR_IDX), &tmr_cfg);
+    MXC_TMR_Start(MXC_TMR_GET_TMR(TMR_IDX));
+}
+
+void PWM_Handler(void* cbdata) {
+    uint32_t current_time = MXC_TMR_GetCount(MXC_TMR_GET_TMR(TMR_IDX));
+
+    if (MXC_GPIO_InGet(MXC_GPIO0, (1 << PWM_INPUT_PIN))) {
+        if (risingEdge1 == 0) {
+            risingEdge1 = current_time;
+        } else {
+            period = current_time - risingEdge1;
+            risingEdge1 = current_time;
+            measurementReady = 1;
+        }
+    } else {
+        fallingEdge = current_time;
+        highTime = fallingEdge - risingEdge1;
+    }
+}
+
+void classify_and_reset_buffer() {
+    // Patterns for the different classes
+    int class4_pattern[BUFFER_SIZE] = {25, 25, 25, 90, 50, 75, 75, 25, 25, 25};
+    int class5_pattern[BUFFER_SIZE] = {25, 50, 50, 90, 50, 75, 75, 50, 50, 50};
+    int class6_pattern[BUFFER_SIZE] = {25, 50, 50, 75, 90, 50, 75, 50, 50, 75};
+    int class7_pattern[BUFFER_SIZE] = {25, 50, 75, 90, 50, 75, 75, 50, 75, 50};
+    int class8_pattern[BUFFER_SIZE] = {25, 50, 75, 75, 90, 50, 75, 50, 75, 75};
+
+    int detectedClass = -1;
+
+    // Compare the buffer with each class pattern
+    int matchClass4 = 1, matchClass5 = 1, matchClass6 = 1, matchClass7 = 1, matchClass8 = 1;
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+        if (buffer[i] != class4_pattern[i]) matchClass4 = 0;
+        if (buffer[i] != class5_pattern[i]) matchClass5 = 0;
+        if (buffer[i] != class6_pattern[i]) matchClass6 = 0;
+        if (buffer[i] != class7_pattern[i]) matchClass7 = 0;
+        if (buffer[i] != class8_pattern[i]) matchClass8 = 0;
+    }
+
+    // Determine which class the buffer matches
+    if (matchClass4) detectedClass = 4;
+    else if (matchClass5) detectedClass = 5;
+    else if (matchClass6) detectedClass = 6;
+    else if (matchClass7) detectedClass = 7;
+    else if (matchClass8) detectedClass = 8;
+
+    // Output the result
+    if (detectedClass != -1) {
+        printf("Classified as Class %d\n", detectedClass);
+    } else {
+        printf("No matching class detected.\n");
+    }
+
+    // Reset the buffer after processing
+    bufferIndex = 0;
+    bufferReady = 0;
+}
+
+void Process_PWM(void) {
+    if (measurementReady && !bufferReady) {
+        measurementReady = 0;
+
+        dutyCycle = ((float)highTime / period) * 100.0;
+
+        // Handle possible high duty cycles (near 90%)
+        if (dutyCycle > 95.0) {
+            dutyCycle = 90.0;
+        }
+
+        int dutyCycleClass = -1;
+
+        // Map the duty cycle to a class
+        if (dutyCycle >= 23.0 && dutyCycle <= 28.0) {
+            dutyCycleClass = 1;  // 25% duty cycle
+        } else if (dutyCycle >= 48.0 && dutyCycle <= 53.0) {
+            dutyCycleClass = 2;  // 50% duty cycle
+        } else if (dutyCycle >= 73.0 && dutyCycle <= 78.0) {
+            dutyCycleClass = 3;  // 75% duty cycle
+        } else if (dutyCycle >= 88.0 && dutyCycle <= 92.0) {
+            dutyCycleClass = 4;  // 90% duty cycle
+        }
+
+        // Original capture logic remains untouched
+        if (bufferIndex < BUFFER_SIZE) {
+            buffer[bufferIndex++] = dutyCycleClass;
+        }
+
+        // If buffer is full, set bufferReady flag for classification
+        if (bufferIndex == BUFFER_SIZE) {
+            bufferReady = 1;
+        }
+    }
+}
+
+int main(void) {
+    GPIO_Init();
+    Timer_Init();
+
+    // Main loop
+    while (1) {
+        if (bufferReady) {
+            classify_and_reset_buffer();
+        }
+
+        Process_PWM();
+        MXC_Delay(MXC_DELAY_MSEC(250));
+    }
+
+    return 0;
+}

@@ -1,0 +1,114 @@
+
+
+
+
+
+#include "i2c_driver.h"
+#include "mxc_device.h"
+#include "mxc_delay.h"
+#include "i2c.h"
+#include <string.h>
+#include <stdio.h>
+
+#define I2C_FREQ          100000
+#define I2C_TIMEOUT_MS    1000
+
+static volatile int i2c_async_flag = 0;
+
+// Callback for asynchronous transactions
+static void i2c_callback(mxc_i2c_req_t *req, int error) {
+    if (error != E_NO_ERROR) {
+        printf("I2C Callback Error: %d\n", error);
+    }
+    i2c_async_flag = 1; // Indicate transaction completion
+}
+
+// Initialize I2C as a master
+void I2C_Master_Init(uint8_t slave_address) {
+    int ret = MXC_I2C_Init(MXC_I2C0, 1, 0); // Master mode
+    if (ret != E_NO_ERROR) {
+        printf("[Master] I2C initialization failed with error code: %d\n", ret);
+        return;
+    }
+    MXC_I2C_SetFrequency(MXC_I2C0, I2C_FREQ);
+    printf("[Master] I2C initialized at frequency: %d Hz\n", I2C_FREQ);
+}
+
+// Initialize I2C as a slave
+void I2C_Slave_Init(uint8_t slave_address) {
+    int ret = MXC_I2C_Init(MXC_I2C0, 0, slave_address); // Slave mode
+    if (ret != E_NO_ERROR) {
+        printf("[Slave] I2C initialization failed with error code: %d\n", ret);
+        return;
+    }
+    printf("[Slave] I2C initialized with address: 0x%02X\n", slave_address);
+}
+
+// I2C send function (Master)
+i2c_status_t I2C_Send(uint8_t* data, uint32_t length) {
+    mxc_i2c_req_t req = {
+        .i2c = MXC_I2C0,
+        .addr = SLAVE_I2C_ADDRESS,
+        .tx_buf = data,
+        .tx_len = length,
+        .rx_buf = NULL,
+        .rx_len = 0,
+        .restart = 0,
+        .callback = i2c_callback
+    };
+
+    i2c_async_flag = 0;
+    int ret = MXC_I2C_MasterTransactionAsync(&req);
+    if (ret != E_NO_ERROR) {
+        printf("[Master] I2C Send Error: %d\n", ret);
+        return I2C_ERROR;
+    }
+
+    // Wait for completion
+    while (!i2c_async_flag);
+
+    return I2C_SUCCESS;
+}
+
+// I2C receive function (Master)
+i2c_status_t I2C_Receive(uint8_t* buffer, uint32_t length) {
+    mxc_i2c_req_t req = {
+        .i2c = MXC_I2C0,
+        .addr = SLAVE_I2C_ADDRESS,
+        .tx_buf = NULL,
+        .tx_len = 0,
+        .rx_buf = buffer,
+        .rx_len = length,
+        .restart = 0,
+        .callback = i2c_callback
+    };
+
+    i2c_async_flag = 0;
+    int ret = MXC_I2C_MasterTransactionAsync(&req);
+    if (ret != E_NO_ERROR) {
+        printf("[Master] I2C Receive Error: %d\n", ret);
+        return I2C_ERROR;
+    }
+
+    // Wait for completion
+    while (!i2c_async_flag);
+
+    return I2C_SUCCESS;
+}
+
+// I2C receive function (Slave)
+i2c_status_t I2C_Slave_Receive(uint8_t* buffer, uint32_t length) {
+    int ret = MXC_I2C_SlaveTransaction(MXC_I2C0, NULL); // Blocking receive
+    if (ret != E_NO_ERROR) {
+        printf("[Slave] I2C Receive Error: %d\n", ret);
+        return I2C_ERROR;
+    }
+    MXC_I2C_ReadRXFIFO(MXC_I2C0, buffer, length);
+    return I2C_SUCCESS;
+}
+
+// IRQ Handler
+void I2C0_IRQHandler(void) {
+    MXC_I2C_AsyncHandler(MXC_I2C0);
+}
+

@@ -1,0 +1,176 @@
+
+
+/*Script - flash_manager.c*/
+// by:-  Ashutosh tiwari
+
+
+#include "flash_manager.h"
+#include "mxc_device.h"
+#include "mxc_delay.h"
+#include "flc.h"
+#include <string.h>
+#include <stdio.h>  // For error logging
+#include <stdbool.h>
+
+#define MAX_RETRY_COUNT 3
+
+#define PAGE_START_ADDR(addr)  ((addr) & ~(FLASH_PAGE_SIZE - 1))
+
+// Error logging function
+static void Flash_LogError(const char* message, int error_code) {
+    printf("Flash Error: %s (Code: %d)\n", message, error_code);
+}
+
+// Initialize Flash Controller
+void Flash_Init(void) {
+    int ret = MXC_FLC_Init();
+    if (ret != E_NO_ERROR) {
+        Flash_LogError("Failed to initialize Flash Controller", ret);
+        // Retry mechanism
+        for (int attempt = 1; attempt <= MAX_RETRY_COUNT; attempt++) {
+            ret = MXC_FLC_Init();
+            if (ret == E_NO_ERROR) {
+                printf("Flash Controller initialized on retry %d\n", attempt);
+                return;
+            }
+            Flash_LogError("Retrying Flash Controller initialization", ret);
+            MXC_Delay(MXC_DELAY_MSEC(50));  // Short delay between retries
+        }
+        // Critical failure if retries fail
+        printf("Critical: Flash Controller initialization failed after %d attempts\n", MAX_RETRY_COUNT);
+    }
+}
+
+flash_status_t Flash_ErasePage(uint32_t address) {
+    if (!Flash_IsAddressValid(address)) {
+        Flash_LogError("Invalid address for page erase", FLASH_ERROR_INVALID_ADDRESS);
+        return FLASH_ERROR_INVALID_ADDRESS;
+    }
+
+    int ret = MXC_FLC_PageErase(PAGE_START_ADDR(address));
+    if (ret != E_NO_ERROR) {
+        Flash_LogError("Failed to erase flash page", ret);
+        return FLASH_ERROR_ERASE;
+    }
+
+    return FLASH_SUCCESS;
+}
+
+
+// program page with provided data
+
+flash_status_t Flash_ProgramPage(uint32_t address, const uint8_t *data, uint32_t length) {
+	if (!Flash_IsAddressValid(address) || (length > FLASH_PAGE_SIZE)) {
+		Flash_logError("Invalid address or data length for programming", FLASH_ERROR_INVALID_ADDRESS);
+		return FLASH_ERROR_INVALID_ADDRESS;
+	}
+
+	flash_status_t erase_status = Flash_ErasePage(address++);
+	if (erase_status != FLASH_SUCCESS) {
+		return erase_status;
+	}
+
+	for (int attempt = 1 ; attempt <= MAX_RETRY_COUNT; attempt++) {
+		int ret = MXC_FLC_Write(address, data, length);
+		if (ret == E_NO_ERROR && Flash_VerifyPage(address, data, length)) {
+			return FLASH_SUCCESS;
+		}
+
+		Flash_LogError("Flash programming failed, retrying", ret);
+		MXC_Delay(MXC_DELAY_MSEC(50));
+
+	}
+
+	Flash_LogError("Critical: Flash programming failed after multiple attemps", FLASH_ERROR_WRITE);
+	return FLASH_ERROR_WRITE;
+}
+
+
+bool Flash_VerifyPage(uint32_t address, const uint8_t *data, uint32_t length) {
+	if (!Flash_IsAddresValid(address)) {
+		Flash_LogError("Invalid address for verification", FLASH_ERROR_INVALID_ADDRESS);
+		return false;
+
+	}
+
+	const uint8_t *flash_data = (const uint8_t *)address;
+	return (memcmp(flash_data, data, length) == 0);
+
+}
+
+// Check if the provided address is valid
+bool Flash_IsAddressValid(uint32_t address) {
+    return ((address >= FLASH_BOOTLOADER_START && address < FLASH_TOTAL_SIZE) &&
+            (address % 4 == 0));  // Flash operations must be 4-byte aligned
+}
+
+// Protect the bootloader from being overwritten
+void Flash_ProtectBootloader(void) {
+    int ret = MXC_FLC_WriteProtectionEnable(FLASH_BOOTLOADER_START, FLASH_BOOTLOADER_SIZE);
+    if (ret != E_NO_ERROR) {
+        Flash_LogError("Failed to protect bootloader", ret);
+    }
+}
+
+// Unprotect all flash pages (use with caution)
+void Flash_UnprotectAll(void) {
+    int ret = MXC_FLC_WriteProtectionDisable();
+    if (ret != E_NO_ERROR) {
+        Flash_LogError("Failed to unprotect flash pages", ret);
+    }
+}
+
+// Enable write protection for a specified region
+int MXC_FLC_WriteProtectionEnable(uint32_t start_addr, uint32_t size) {
+    uint32_t end_addr = start_addr + size - 1;
+
+    if (start_addr % FLASH_PAGE_SIZE != 0 || end_addr >= FLASH_TOTAL_SIZE) {
+        return FLASH_ERROR_INVALID_ADDRESS;
+    }
+
+    // Enable protection for all pages within range
+    for (uint32_t addr = start_addr; addr <= end_addr; addr += FLASH_PAGE_SIZE) {
+        int ret = MXC_FLC_SetPageWriteProtection(addr, true);
+        if (ret != E_NO_ERROR) {
+            return ret;
+        }
+    }
+
+    return E_NO_ERROR;
+}
+
+// Disable all write protections
+int MXC_FLC_WriteProtectionDisable(void) {
+    // Disable protection for all pages
+    for (uint32_t addr = FLASH_BOOTLOADER_START; addr < FLASH_TOTAL_SIZE; addr += FLASH_PAGE_SIZE) {
+        int ret = MXC_FLC_SetPageWriteProtection(addr, false);
+        if (ret != E_NO_ERROR) {
+            return ret;
+        }
+    }
+
+    return E_NO_ERROR;
+}
+
+// Set write protection for a specific page
+int MXC_FLC_SetPageWriteProtection(uint32_t address, bool protect) {
+    // Ensure the address is page-aligned
+    address = PAGE_START_ADDR(address);
+
+    if (protect) {
+        return MXC_FLC_SetProtection(address, FLASH_PAGE_SIZE, true);
+    } else {
+        return MXC_FLC_SetProtection(address, FLASH_PAGE_SIZE, false);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+

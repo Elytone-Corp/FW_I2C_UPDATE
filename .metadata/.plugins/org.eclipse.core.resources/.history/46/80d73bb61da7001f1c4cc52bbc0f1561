@@ -1,0 +1,184 @@
+
+
+#include "i2c.h"
+#include "i2c_driver.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+// Slave I2C address
+#define SLAVE_I2C_ADDRESS 0x55
+
+// Bootloader commands
+#define CMD_START_UPDATE    0x01
+#define CMD_ERASE_PARTITION 0x02
+#define CMD_PROGRAM_PAGE    0x03
+#define CMD_VALIDATE_CRC    0x04
+#define CMD_MARK_ACTIVE     0x05
+#define CMD_REBOOT          0x06
+
+// Firmware update configuration
+#define CHUNK_SIZE 1024  // Chunk size for programming
+#define PARTITION_SIZE 0x1C000  // Inactive partition size
+
+// Retry configuration
+#define I2C_RETRY_COUNT 3
+
+// Simulated firmware data (replace with real firmware binary data)
+const uint8_t firmware_data[PARTITION_SIZE] = { /* Firmware bytes */ };
+
+// Function prototypes
+bool Master_SendCommand(uint8_t command, const uint8_t* payload, uint32_t payload_size, uint8_t* response);
+bool Master_EnterBootloader(void);
+bool Master_ErasePartition(void);
+bool Master_ProgramFirmware(void);
+bool Master_ValidateCRC(void);
+bool Master_MarkActive(void);
+bool Master_RebootSlave(void);
+
+void FirmwareUpdateProcess(void);
+
+int main(void) {
+    // Initialize I2C master
+    I2C_Master_Init(SLAVE_I2C_ADDRESS);
+    printf("[Master] I2C Initialized. Starting firmware update process...\n");
+
+    // Execute firmware update process
+    FirmwareUpdateProcess();
+
+    return 0;
+}
+
+// Firmware update process
+void FirmwareUpdateProcess(void) {
+    uint8_t response;
+
+    // Step 1: Enter Bootloader Mode
+    if (!Master_EnterBootloader()) {
+        printf("[Master] Error: Failed to enter bootloader mode.\n");
+        return;
+    }
+
+    // Step 2: Start Update
+    if (!Master_SendCommand(CMD_START_UPDATE, NULL, 0, &response) || response != 0x00) {
+        printf("[Master] Error: Failed to start update.\n");
+        return;
+    }
+
+    // Step 3: Erase Inactive Partition
+    if (!Master_ErasePartition()) {
+        printf("[Master] Error: Failed to erase partition.\n");
+        return;
+    }
+
+    // Step 4: Program Firmware
+    if (!Master_ProgramFirmware()) {
+        printf("[Master] Error: Firmware programming failed.\n");
+        return;
+    }
+
+    // Step 5: Validate Firmware CRC
+    if (!Master_ValidateCRC()) {
+        printf("[Master] Error: Firmware validation failed.\n");
+        return;
+    }
+
+    // Step 6: Mark Partition Active
+    if (!Master_MarkActive()) {
+        printf("[Master] Error: Failed to mark partition as active.\n");
+        return;
+    }
+
+    // Step 7: Reboot Slave
+    if (!Master_RebootSlave()) {
+        printf("[Master] Error: Failed to reboot slave.\n");
+        return;
+    }
+
+    printf("[Master] Firmware update completed successfully!\n");
+}
+
+// Send command to the slave
+bool Master_SendCommand(uint8_t command, const uint8_t* payload, uint32_t payload_size, uint8_t* response) {
+    uint8_t tx_buffer[CHUNK_SIZE + 1];  // Command + Payload
+    tx_buffer[0] = command;
+
+    if (payload && payload_size > 0) {
+        memcpy(&tx_buffer[1], payload, payload_size);
+    }
+
+    for (int attempt = 0; attempt < I2C_RETRY_COUNT; attempt++) {
+        // Send command
+        if (I2C_Send(tx_buffer, payload_size + 1) == I2C_SUCCESS) {
+            // Receive response
+            if (I2C_Receive(response, 1) == I2C_SUCCESS) {
+                return true;
+            }
+        }
+        printf("[Master] Retrying command: 0x%02X (Attempt %d)\n", command, attempt + 1);
+    }
+
+    printf("[Master] Failed to send command: 0x%02X\n", command);
+    return false;
+}
+
+// Enter bootloader mode
+bool Master_EnterBootloader(void) {
+    uint8_t command[3] = { 0x01, 0x00, 0x08 };  // Enter bootloader command
+    uint8_t response;
+
+    printf("[Master] Sending enter bootloader command...\n");
+    return Master_SendCommand(command[0], &command[1], 2, &response) && response == 0xAA;
+}
+
+// Erase inactive partition
+bool Master_ErasePartition(void) {
+    uint8_t response;
+    printf("[Master] Sending erase partition command...\n");
+    return Master_SendCommand(CMD_ERASE_PARTITION, NULL, 0, &response) && response == 0x00;
+}
+
+// Program firmware to the slave
+bool Master_ProgramFirmware(void) {
+    uint32_t offset = 0;
+    uint8_t response;
+
+    while (offset < PARTITION_SIZE) {
+        uint8_t chunk[CHUNK_SIZE];
+        uint32_t chunk_size = (offset + CHUNK_SIZE <= PARTITION_SIZE) ? CHUNK_SIZE : (PARTITION_SIZE - offset);
+
+        memcpy(chunk, &firmware_data[offset], chunk_size);
+
+        printf("[Master] Programming chunk at offset 0x%08X...\n", offset);
+        if (!Master_SendCommand(CMD_PROGRAM_PAGE, chunk, chunk_size, &response) || response != 0x00) {
+            printf("[Master] Error: Programming failed at offset 0x%08X.\n", offset);
+            return false;
+        }
+
+        offset += chunk_size;
+    }
+
+    return true;
+}
+
+// Validate firmware CRC
+bool Master_ValidateCRC(void) {
+    uint8_t response;
+    printf("[Master] Sending CRC validation command...\n");
+    return Master_SendCommand(CMD_VALIDATE_CRC, NULL, 0, &response) && response == 0x00;
+}
+
+// Mark partition as active
+bool Master_MarkActive(void) {
+    uint8_t response;
+    printf("[Master] Sending mark active partition command...\n");
+    return Master_SendCommand(CMD_MARK_ACTIVE, NULL, 0, &response) && response == 0x00;
+}
+
+// Reboot the slave
+bool Master_RebootSlave(void) {
+    uint8_t response;
+    printf("[Master] Sending reboot command...\n");
+    return Master_SendCommand(CMD_REBOOT, NULL, 0, &response) && response == 0x00;
+}

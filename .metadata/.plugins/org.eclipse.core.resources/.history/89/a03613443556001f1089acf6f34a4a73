@@ -1,0 +1,48 @@
+#include "gpio_isr.h"
+#include "tmr.h"
+#include "pwm_calc.h"
+#include "gpio.h"
+#include <stdio.h>
+
+#define PWM_TMR MXC_TMR0
+#define PWM_GPIO_PORT MXC_GPIO0
+#define PWM_PIN 2
+
+volatile uint32_t rising_edge_time = 0;
+volatile uint32_t falling_edge_time = 0;
+volatile uint32_t high_time = 0;
+volatile uint32_t period = 0;
+
+void gpio_isr(void *cbdata) {
+    static uint32_t last_rising_edge_time = 0;
+    uint32_t current_time = MXC_TMR_GetCount(PWM_TMR);
+
+    if (MXC_GPIO_InGet(PWM_GPIO_PORT, PWM_PIN)) {
+        // Rising edge detected
+        rising_edge_time = current_time;
+        printf("Rising edge detected, time: %u\n", current_time);
+
+        // Calculate the period using the last rising edge time
+        if (last_rising_edge_time > 0) {
+            period = rising_edge_time - last_rising_edge_time;
+        }
+        last_rising_edge_time = rising_edge_time;
+    } else {
+        // Falling edge detected
+        falling_edge_time = current_time;
+        printf("Falling edge detected, time: %u\n", current_time);
+
+        // Calculate the high time as the difference between rising and falling edge times
+        high_time = falling_edge_time - rising_edge_time;
+
+        // Calculate and classify the duty cycle
+        if (period > 0) {
+            calculate_pwm_duty_cycle(high_time, period);
+        }
+    }
+
+    // Clear interrupt flag
+    MXC_GPIO_ClearFlags(PWM_GPIO_PORT, PWM_PIN);
+}
+
+

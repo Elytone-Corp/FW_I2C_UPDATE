@@ -1,0 +1,16 @@
+#include "pwm_calc.h"
+#include "pwm_classify.h"
+#include <stdio.h>
+
+void calculate_pwm_duty_cycle(uint32_t high_time, uint32_t period) {
+    uint8_t duty_cycle = 0;
+    if (period > 0) {
+        duty_cycle = (high_time * 100) / period;
+    } else {
+        duty_cycle = 0;
+    }
+
+    printf("High time: %u, Period: %u\n", high_time, period);  // Debug statement
+    printf("Duty Cycle: %d%%\n", duty_cycle);
+    classify_pwm(duty_cycle);
+}

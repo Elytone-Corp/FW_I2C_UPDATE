@@ -1,0 +1,71 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <stdio.h>
+#include "mxc_device.h"
+#include "board.h"
+#include "i2c.h"
+#include "mxc_delay.h"
+
+#define I2C_MASTER MXC_I2C1              // I2C Master instance
+#define SLAVE_ADDR 0x55                  // Slave device address
+#define FIRMWARE_START_ADDR 0x00004000   // Firmware write start address in slave
+
+void error_handler(const char* msg) {
+    printf("[Error] %s\n", msg);
+    while (1);
+}
+
+void send_firmware_chunk(uint8_t* data, int length, uint32_t addr) {
+    uint8_t packet[256]; // Adjust size if needed
+    int packet_len = 0;
+
+    // First byte: Address type (Address high byte and low byte are sent)
+    packet[packet_len++] = (addr >> 16) & 0xFF;
+    packet[packet_len++] = (addr >> 8) & 0xFF;
+    packet[packet_len++] = addr & 0xFF;
+
+    // Append firmware data
+    for (int i = 0; i < length; i++) {
+        packet[packet_len++] = data[i];
+    }
+
+    if (MXC_I2C_MasterWrite(I2C_MASTER, SLAVE_ADDR, packet, packet_len, 0) != E_NO_ERROR) {
+        error_handler("Failed to send firmware chunk!");
+    }
+}
+
+int main(void) {
+    printf("[Master] Starting...\n");
+
+    // Initialize I2C master
+    if (MXC_I2C_Init(I2C_MASTER, 1, 0) != E_NO_ERROR) {
+        error_handler("I2C initialization failed");
+    }
+
+    MXC_I2C_SetFrequency(I2C_MASTER, 100000);  // Set I2C frequency (100kHz)
+
+    uint8_t firmware_chunk[] = {
+        // Insert sample firmware chunk here (e.g., first 256 bytes from .hex)
+        0x81, 0x73, 0x0B, 0x93, 0x00, 0x2A, 0x27, 0xF0, 0x20, 0x03, 0xA2, 0x46,
+        0x07, 0x93, 0xC0, 0xF2 // 16 bytes sample, extend to 256 or align to actual size
+    };
+
+    // Send firmware chunk to slave starting at FIRMWARE_START_ADDR
+    send_firmware_chunk(firmware_chunk, sizeof(firmware_chunk), FIRMWARE_START_ADDR);
+
+    printf("[Master] Firmware write completed.\n");
+
+    while (1);
+}

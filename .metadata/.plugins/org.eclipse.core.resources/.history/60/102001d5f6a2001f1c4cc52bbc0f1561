@@ -1,0 +1,25 @@
+
+
+
+/*Script - validator_manager.h*/
+// by:-  Ashutosh tiwari
+
+
+
+#ifndef SECURITY_MANAGER_H
+#define SECURITY_MANAGER_H
+
+
+#include <stdint.h>
+#include <stdbool.h>
+
+void Security_Init(void);
+
+bool Security_VerifySignature(uint32_t firmware_start_address, uint32_t firmware_size, const uint8_t* signature, uint32_t signature_length);
+
+bool Security_StorePublicKey(const uint8_t* key, uint32_t key_length);
+
+bool Security_ReadPublicKey(uint8_t* key, uint32_t key_length);
+
+#endif // SECURITY_MANAGER_H
+

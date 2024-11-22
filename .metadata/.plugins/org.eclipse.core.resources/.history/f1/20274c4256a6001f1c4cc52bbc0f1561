@@ -1,0 +1,67 @@
+#include <stdio.h>
+#include "mxc_device.h"
+#include "board.h"
+#include "i2c.h"
+#include "mxc_delay.h"
+
+#define I2C_MASTER MXC_I2C1              // I2C Master instance
+#define SLAVE_ADDR 0x55                  // Slave device address
+#define FIRMWARE_START_ADDR 0x00004000   // Firmware write start address in slave
+#define CHUNK_SIZE 256                   // Define chunk size for firmware chunks
+
+void error_handler(const char* msg) {
+    printf("[Error] %s\n", msg);
+    while (1);  // Stay in error state
+}
+
+void send_firmware_chunk(uint8_t* data, int length, uint32_t addr) {
+    uint8_t packet[CHUNK_SIZE + 3];  // +3 for address bytes
+    int packet_len = 0;
+
+    // Include address in the packet (big-endian format)
+    packet[packet_len++] = (addr >> 16) & 0xFF;
+    packet[packet_len++] = (addr >> 8) & 0xFF;
+    packet[packet_len++] = addr & 0xFF;
+
+    // Copy firmware data into the packet
+    for (int i = 0; i < length; i++) {
+        packet[packet_len++] = data[i];
+    }
+
+    // I2C write operation
+    if (MXC_I2C_Write(I2C_MASTER, SLAVE_ADDR, packet, packet_len) != E_NO_ERROR) {
+        error_handler("I2C Write failed.");
+    }
+}
+
+int main(void) {
+    printf("[Master] Initializing I2C Master...\n");
+
+    // Initialize I2C as master
+    if (MXC_I2C_Init(I2C_MASTER, 1, 0) != E_NO_ERROR) {
+        error_handler("I2C Initialization failed.");
+    }
+
+    // Set I2C frequency
+    if (MXC_I2C_SetFrequency(I2C_MASTER, MXC_I2C_FAST_SPEED) != E_NO_ERROR) {
+        error_handler("Failed to set I2C frequency.");
+    }
+
+    // Example firmware data to send (in a real case, read firmware binary here)
+    uint8_t firmware_data[CHUNK_SIZE] = {0x01, 0x02, 0x03, 0x04};  // Sample data
+    uint32_t firmware_size = sizeof(firmware_data);
+    uint32_t current_address = FIRMWARE_START_ADDR;
+
+    printf("[Master] Sending firmware to Slave...\n");
+
+    for (uint32_t i = 0; i < firmware_size; i += CHUNK_SIZE) {
+        int chunk_size = (firmware_size - i) > CHUNK_SIZE ? CHUNK_SIZE : (firmware_size - i);
+        send_firmware_chunk(&firmware_data[i], chunk_size, current_address);
+        current_address += chunk_size;  // Increment the address for next chunk
+        MXC_Delay(MXC_DELAY_MSEC(10));  // Delay for slave readiness
+    }
+
+    printf("[Master] Firmware sent successfully.\n");
+
+    while (1);  // Keep the program running
+}

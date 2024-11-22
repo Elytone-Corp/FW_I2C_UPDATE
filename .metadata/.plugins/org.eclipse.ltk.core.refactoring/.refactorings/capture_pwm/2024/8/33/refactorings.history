@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;capture_pwm/pwm_calc.c&apos; to &apos;gpio_init.c&apos;" description="Rename resource &apos;pwm_calc.c&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="pwm_calc.c" name="gpio_init.c" stamp="1723390065166" updateReferences="true"/>
+</session>

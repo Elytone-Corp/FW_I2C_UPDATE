@@ -1,0 +1,237 @@
+
+
+//*********************************STABLE_CODE_STABLE_PWM_DETECT & CLASSIFICATION**************************************
+
+
+
+
+//#include <stdio.h>
+//#include "mxc_device.h"
+//#include "gpio.h"
+//#include "tmr.h"
+//#include "nvic_table.h"
+//#include "mxc_delay.h"
+//#include "uart.h"
+//
+//#define PWM_INPUT_PIN      2  // This is P0_2, connected to the PWM signal
+//#define TMR_IDX            0  // Use Timer 0
+//
+//volatile uint32_t risingEdge1 = 0, fallingEdge = 0, period = 0;
+//volatile uint32_t highTime = 0;
+//volatile float dutyCycle = 0.0;
+//volatile int measurementReady = 0;
+//volatile int currentClass = -1;
+//
+//void PWM_Handler(void* cbdata);
+//
+//void GPIO_Init(void) {
+//    mxc_gpio_cfg_t gpio_cfg_pwm = {
+//        .port = MXC_GPIO0,
+//        .mask = (1 << PWM_INPUT_PIN),
+//        .pad = MXC_GPIO_PAD_NONE,
+//        .func = MXC_GPIO_FUNC_IN
+//    };
+//    MXC_GPIO_Config(&gpio_cfg_pwm);
+//
+//    // Register and enable interrupts
+//    MXC_GPIO_RegisterCallback(&gpio_cfg_pwm, PWM_Handler, NULL);
+//    MXC_GPIO_IntConfig(&gpio_cfg_pwm, MXC_GPIO_INT_BOTH);
+//    MXC_GPIO_EnableInt(gpio_cfg_pwm.port, gpio_cfg_pwm.mask);
+//
+//    NVIC_EnableIRQ(MXC_GPIO_GET_IRQ(MXC_GPIO_GET_IDX(MXC_GPIO0)));
+//}
+//
+//void Timer_Init(void) {
+//    mxc_tmr_cfg_t tmr_cfg;
+//
+//    MXC_TMR_Stop(MXC_TMR_GET_TMR(TMR_IDX));
+//
+//    tmr_cfg.pres = MXC_TMR_PRES_1;
+//    tmr_cfg.mode = MXC_TMR_MODE_CONTINUOUS;
+//    tmr_cfg.cmp_cnt = 0;
+//    tmr_cfg.pol = 0;
+//
+//    MXC_TMR_Init(MXC_TMR_GET_TMR(TMR_IDX), &tmr_cfg);
+//    MXC_TMR_Start(MXC_TMR_GET_TMR(TMR_IDX));
+//}
+//
+//void PWM_Handler(void* cbdata) {
+//    uint32_t current_time = MXC_TMR_GetCount(MXC_TMR_GET_TMR(TMR_IDX));
+//
+//    if (MXC_GPIO_InGet(MXC_GPIO0, (1 << PWM_INPUT_PIN))) {
+//        if (risingEdge1 == 0) {
+//            risingEdge1 = current_time;
+//        } else {
+//            period = current_time - risingEdge1;
+//            risingEdge1 = current_time;
+//            measurementReady = 1;
+//        }
+//    } else {
+//        fallingEdge = current_time;
+//        highTime = fallingEdge - risingEdge1;
+//    }
+//}
+//
+//void Process_PWM(void) {
+//    if (measurementReady) {
+//        measurementReady = 0;
+//
+//        dutyCycle = ((float)highTime / period) * 100.0;
+//
+//        // Handle possible high duty cycles (near 90%)
+//        if (dutyCycle > 95.0) {
+//            dutyCycle = 90.0;
+//        }
+//
+//        // Define ranges based on the new logic (I used 4 units)
+//        const float requiredDutyCycleRanges[4][2] = {
+//            {23.0, 28.0},  // 25% duty cycle range
+//            {48.0, 53.0},  // 50% duty cycle range
+//            {73.0, 78.0},  // 75% duty cycle range
+//            {88.0, 92.0}   // 90% duty cycle range
+//        };
+//
+//        // Classification logic
+//        for (int i = 0; i < 4; i++) {
+//            if (dutyCycle >= requiredDutyCycleRanges[i][0] && dutyCycle <= requiredDutyCycleRanges[i][1]) {
+//                if (i != currentClass) {
+//                    float classifiedDuty = (i + 1) * 22.5;
+//                    if (i == 0) classifiedDuty = 25;
+//                    if (i == 1) classifiedDuty = 50;
+//                    if (i == 2) classifiedDuty = 75;
+//                    if (i == 3) classifiedDuty = 90;
+//
+//                    printf("Measured Duty Cycle: %.2f%%\n", dutyCycle);
+//                    printf("----------  ");
+//                    printf("Classified as =====>> %.0f%% duty cycle\n", classifiedDuty);
+//                    currentClass = i;
+//                }
+//                break;
+//            }
+//        }
+//    }
+//}
+//
+//int main(void) {
+//    GPIO_Init();
+//    Timer_Init();
+//
+//    // Initial classification right after start
+//    printf("STARING_____ AT :--> \n");
+//    Process_PWM();
+//
+//    while (1) {
+//        Process_PWM();
+//        MXC_Delay(MXC_DELAY_MSEC(250));
+//    }
+//
+//    return 0;
+//}
+
+
+//==================================================================================================================
+
+
+
+#include <stdio.h>
+#include "mxc_device.h"
+#include "gpio.h"
+#include "tmr.h"
+#include "nvic_table.h"
+#include "uart.h"
+#include "mxc_delay.h"
+
+// Assuming PWM signal is on Pin 2
+#define PWM_PIN 2
+
+volatile uint32_t rising_edge_time = 0;
+volatile uint32_t falling_edge_time = 0;
+volatile uint32_t high_time = 0;
+volatile uint32_t low_time = 0;
+volatile uint8_t pwm_captured = 0;
+
+// Timer configuration
+void timer_setup() {
+    // Configure timer (Assume TMR0)
+    tmr_cfg_t tmr_cfg;
+    tmr_cfg.mode = TMR_MODE_COUNTER;
+    tmr_cfg.pres = TMR_PRES_1;  // No prescaling
+    tmr_cfg.bitMode = TMR_BIT_MODE_32;
+
+    TMR_Init(MXC_TMR0, &tmr_cfg, false);
+    TMR_Enable(MXC_TMR0);
+}
+
+// Interrupt Handler for GPIO (PWM signal capture)
+void GPIO_Handler(void) {
+    if (GPIO_InGet(PWM_PIN)) {
+        // Rising edge detected
+        rising_edge_time = TMR_GetCount(MXC_TMR0);
+    } else {
+        // Falling edge detected
+        falling_edge_time = TMR_GetCount(MXC_TMR0);
+
+        // Calculate high time and low time
+        high_time = falling_edge_time - rising_edge_time;
+        low_time = rising_edge_time - falling_edge_time;  // Assuming continuous signal
+
+        pwm_captured = 1;
+    }
+
+    // Clear interrupt flag
+    GPIO_ClearFlags(PWM_PIN);
+}
+
+void gpio_setup() {
+    // Configure GPIO for input with interrupts on both edges
+    gpio_cfg_t gpio_cfg;
+    gpio_cfg.port = GPIO_PORT;
+    gpio_cfg.mask = (1 << PWM_PIN);
+    gpio_cfg.pad = GPIO_PAD_PULL_UP;
+    gpio_cfg.func = GPIO_FUNC_IN;
+    gpio_cfg.vssel = VDDIOH;
+
+    GPIO_Config(&gpio_cfg);
+
+    // Enable interrupt on both edges (rising and falling)
+    GPIO_IntConfig(&gpio_cfg, GPIO_INT_BOTH_EDGES);
+    GPIO_RegisterCallback(PWM_PIN, GPIO_Handler, NULL);
+    GPIO_IntEnable(PWM_PIN);
+    NVIC_EnableIRQ(GPIO_IRQn);
+}
+
+void uart_setup() {
+    // Set up UART for printing duty cycle results
+    mxc_uart_cfg_t uart_cfg;
+    uart_cfg.baud = 115200;
+    uart_cfg.flow = MXC_UART_FLOW_DISABLE;
+    uart_cfg.parity = MXC_UART_PARITY_DISABLE;
+    uart_cfg.stopbits = MXC_UART_STOPBITS_1;
+
+    UART_Init(MXC_UART0, &uart_cfg);
+}
+
+int main(void) {
+    // Initialize system and peripherals
+    System_Init();
+    timer_setup();
+    gpio_setup();
+    uart_setup();
+
+    while (1) {
+        if (pwm_captured) {
+            // Calculate duty cycle percentage
+            uint32_t period = high_time + low_time;
+            uint32_t duty_cycle = (high_time * 100) / period;
+
+            // Print duty cycle over UART
+            printf("Duty Cycle: %lu%%\n", duty_cycle);
+
+            // Reset flag
+            pwm_captured = 0;
+        }
+
+        // Small delay to avoid spamming UART
+        MXC_Delay(100000);
+    }
+}

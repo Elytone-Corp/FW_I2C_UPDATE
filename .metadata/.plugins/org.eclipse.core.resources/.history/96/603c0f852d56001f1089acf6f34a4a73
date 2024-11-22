@@ -1,0 +1,38 @@
+#include "pwm_init.h"
+#include "tmr.h"
+#include "mxc_device.h"
+#include "gpio.h"
+#include "nvic_table.h"
+
+#define PWM_TMR MXC_TMR0
+#define PWM_GPIO_PORT MXC_GPIO0
+#define PWM_PIN 2
+
+void pwm_init(void) {
+    // Configure GPIO for PWM input
+    mxc_gpio_cfg_t gpio_cfg = {
+        .port = PWM_GPIO_PORT,
+        .mask = (1 << PWM_PIN),
+        .func = MXC_GPIO_FUNC_IN,
+        .pad = MXC_GPIO_PAD_PULL_UP,
+        .vssel = MXC_GPIO_VSSEL_VDDIOH
+    };
+
+    MXC_GPIO_Config(&gpio_cfg);
+    MXC_GPIO_RegisterCallback(&gpio_cfg, gpio_isr, NULL);
+    MXC_GPIO_IntConfig(&gpio_cfg, MXC_GPIO_INT_RISING);  // Enable rising edge interrupt
+    MXC_GPIO_IntConfig(&gpio_cfg, MXC_GPIO_INT_FALLING); // Enable falling edge interrupt
+    MXC_GPIO_EnableInt(gpio_cfg.port, gpio_cfg.mask);
+    NVIC_EnableIRQ(GPIO0_IRQn);
+
+    // Initialize Timer
+    mxc_tmr_cfg_t tmr_cfg = {
+        .pres = MXC_TMR_PRES_1,
+        .mode = MXC_TMR_MODE_CONTINUOUS,
+        .cmp_cnt = 0xFFFFFFFF,
+        .pol = 0
+    };
+
+    MXC_TMR_Init(PWM_TMR, &tmr_cfg);
+    MXC_TMR_Start(PWM_TMR);
+}

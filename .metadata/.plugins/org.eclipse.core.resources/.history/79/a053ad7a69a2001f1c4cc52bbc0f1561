@@ -1,0 +1,28 @@
+
+
+
+/*Script - update_manager.c*/
+// by:-  Ashutosh tiwari
+
+
+#include "update_manager.h"
+#include <stdio.h>
+#include <string.h>
+
+
+static bool update_in_progress = false;
+static uint32_t firmware_size = 0;
+static uint32_t bytes_recieved = 0;
+static update_status_t last_status = UPDATE_SUCCESS;
+
+
+static void SetStatus(update_status_t status) {
+	last_status = status;
+	if (status != UPDATE_SUCCESS) {
+		printf("[Update Manager] Error: %d\n", status);
+	}
+}
+
+void UpdateManager_Init(void) {
+
+}

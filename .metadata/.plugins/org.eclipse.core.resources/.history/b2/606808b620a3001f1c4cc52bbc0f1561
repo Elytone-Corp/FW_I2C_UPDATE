@@ -1,0 +1,82 @@
+
+
+/*Script - partition_manager.c*/
+// by:-  Ashutosh tiwari
+
+
+
+
+#include "partition_manager.h"
+#include "flash_manager.h"
+#include <string.h>
+#include <stdio.h>
+
+
+static partition_t active_partition = {
+    .start_address = PARTITION_ACTIVE_START,
+    .size = PARTITION_SIZE,
+    .validation_flag = PARTITION_INVALID_FLAG
+};
+
+
+static partition_t inactive_partition = {
+		.start_address = PARTITION_INACTIVE_START,
+		.size = PARTITION_SIZE,
+		.validation_flag = PARTITION_INVALID_FLAG
+};
+
+
+void Partition_Init(void) {
+	printf("Initializing Partition....\n");
+
+	active_partition.validation_flag = *(volatile uint32_t*)(active_partition.start_address + PARTITION_SIZE - 4);
+	inactive_partition.validation_flag = *(volatile uint32_t*)(inactive_partition.start_address + PARTITION_SIZE - 4);
+
+	printf("Active Partition: %d\n", PARTITION_IsValid(PARTITION_ACTIVE) ? "Valid" :  "Invalid");
+	printf("Inactive_Partition: %d\n", PARTITION_IsValid(PARTITION_INACTIVE) ? "Valid" :  "Invalid");
+
+}
+
+bool Partition_Validate(partition_type_t partition) {
+	partition_t *target_partition = (partition == PARTITION_ACTIVE) ? &active_partition : &inactive_partition;
+
+	printf("Validating Partition at Address : 0x%08X\n", target_partition->start_address);
+
+	if (target_partition->validation_flag == PARTITION_VALID_FLAG) {
+		printf("Partition is valid.\n");
+		return true;
+
+	}
+
+	printf("Partition is Invalid. \n");
+	return false;
+
+}
+
+bool Partition_SwitchActive(void) {
+	printf("Switch Active Partition...\n");
+
+	if (!Partition_Validate(PARTITION_INACTIVE)) {
+		printf("Inactive partition is not valid. Aborting switch.\n");
+		return false;
+	}
+	active_partition.validation_flag = PARTITION_INVALID_FLAG;
+	    inactive_partition.validation_flag = PARTITION_VALID_FLAG;
+
+	    printf("Active partition switched successfully.\n");
+	    return true;
+	}
+
+	void Partition_MarkRollback(partition_type_t partition) {
+	    partition_t *target_partition = (partition == PARTITION_ACTIVE) ? &active_partition : &inactive_partition;
+
+	    printf("Marking Partition at 0x%08X for rollback.\n", target_partition->start_address);
+	    target_partition->validation_flag = PARTITION_INVALID_FLAG;
+	}
+
+	bool Partition_IsValid(partition_type_t partition) {
+	    partition_t *target_partition = (partition == PARTITION_ACTIVE) ? &active_partition : &inactive_partition;
+	    return target_partition->validation_flag == PARTITION_VALID_FLAG;
+	}
+
+

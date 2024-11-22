@@ -1,0 +1,32 @@
+
+
+/*Script -- communication_manager.c*/
+// Edited by :-  Ashutosh Tiwari
+
+
+
+#include "communication_manager.h"
+#include "crc.h"
+#include "state_manager.h"
+#include <string.h>
+#include <stdio.h>
+
+
+static uint8_t retry_count = 0;
+
+void CommunicationManager_Init(void) {
+	printf("[Communication Manager] Initializing communication....\n");
+	retry_count = 0;
+}
+
+comm_status_t CommunicationManager_Send(const uint8_t* packet, uint32_t length) {
+	if (length > MAX_PACKET_SIZE) {
+		printf("[Communication Manager] Error: Packet size exceeds limit.\n");
+		return COMM_ERR_INVALID_PACKET;
+	}
+
+	print("[Communication Manager] Sending packet of length %d....\n", length);
+
+	uint8_t response = COMM_NACK;
+	retry_count++;
+}

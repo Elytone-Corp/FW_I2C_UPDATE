@@ -1,0 +1,36 @@
+
+
+
+/*Script - flash_manager.c*/
+// by:-  Ashutosh tiwari
+
+
+#ifndef STATE_MANAGER_H
+#define STATE_MANAHER_H
+
+#include <stdint.h>
+#include <stdbool.h>
+
+
+typedef enum {
+	STATE_BOOT = 0,
+	STATE_UPDATE,
+	STATE_VALIDATE,
+	STATE_ROLLBACK,
+	STATE_ERROR
+} bootloader_state_t ;
+
+
+void StateManager_Init(void);
+
+void StateManager_SetState(bootloader_state_t state);
+
+bootloader_state_t StateManager_GetState(void);
+
+bool StateManger_IsInState(bootloader_state_t state);
+
+#endif // STATE_MANAGER
+
+
+
+

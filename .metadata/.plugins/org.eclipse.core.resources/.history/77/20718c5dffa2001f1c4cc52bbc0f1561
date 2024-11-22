@@ -1,0 +1,18 @@
+
+
+/*Script - memory_manager.h*/
+// by:-  Ashutosh Tiwari
+
+
+
+#ifndef MEMORY_MANAGER_H
+#define MEMORY_MANAGER_H
+
+
+#include <stdint.h>
+#include <stdbool.h>
+
+#define MEMORY_BUFFER_SIZE 1024
+
+
+

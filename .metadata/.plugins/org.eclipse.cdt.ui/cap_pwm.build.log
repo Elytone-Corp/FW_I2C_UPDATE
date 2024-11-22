@@ -1,0 +1,88 @@
+16:02:29 **** Build of configuration Debug for project cap_pwm ****
+make ECLIPSE=1 all 
+Loaded project.mk
+****************************************************************************
+* Analog Devices MSDK
+* - User Guide: https://analogdevicesinc.github.io/msdk/USERGUIDE/
+* - Get Support: https://www.analog.com/support/technical-support.html
+* - Report Issues: https://github.com/Analog-Devices-MSDK/msdk/issues
+* - Contributing: https://analogdevicesinc.github.io/msdk/CONTRIBUTING/
+****************************************************************************
+- MKDIR /c/Users/ashutoshtiwari/eclipse-workspace/cap_pwm/build
+arm-none-eabi-gcc -mthumb -mcpu=cortex-m4 -mfloat-abi=softfp -mfpu=fpv4-sp-d16 -Wa,-mimplicit-it=thumb -Og -ffunction-sections -fdata-sections -fsingle-precision-constant -Wall -Wno-format -Wdouble-promotion -MD -c -fno-isolate-erroneous-paths-dereference -DTARGET=MAX32660 -DMAX32660 -DTARGET_REV=0x4131 -g3 -ggdb -DDEBUG -Wall -DMXC_ASSERT_ENABLE -DLIB_BOARD -Werror=implicit-function-declaration -I. -Iinclude -IC:/MaximSDK/Libraries/Boards/MAX32660/EvKit_V1/Include -IC:/MaximSDK/Libraries/MiscDrivers -IC:/MaximSDK/Libraries/MiscDrivers/LED -IC:/MaximSDK/Libraries/MiscDrivers/PushButton -IC:/MaximSDK/Libraries/PeriphDrivers/Include/MAX32660/ -IC:/MaximSDK/Libraries/PeriphDrivers/Source/DMA -IC:/MaximSDK/Libraries/PeriphDrivers/Source/FLC -IC:/MaximSDK/Libraries/PeriphDrivers/Source/GPIO -IC:/MaximSDK/Libraries/PeriphDrivers/Source/I2C -IC:/MaximSDK/Libraries/PeriphDrivers/Source/ICC -IC:/MaximSDK/Libraries/PeriphDrivers/Source/LP -IC:/MaximSDK/Libraries/PeriphDrivers/Source/RTC -IC:/MaximSDK/Libraries/PeriphDrivers/Source/SPI -IC:/MaximSDK/Libraries/PeriphDrivers/Source/SPIMSS -IC:/MaximSDK/Libraries/PeriphDrivers/Source/TMR -IC:/MaximSDK/Libraries/PeriphDrivers/Source/UART -IC:/MaximSDK/Libraries/PeriphDrivers/Source/WDT -IC:/MaximSDK/Libraries/CMSIS/Device/Maxim/MAX32660/Include -IC:/MaximSDK/Libraries/CMSIS/5.9.0/Core/Include -o /c/Users/ashutoshtiwari/eclipse-workspace/cap_pwm/build/Classification.o Classification.c
+arm-none-eabi-gcc -mthumb -mcpu=cortex-m4 -mfloat-abi=softfp -mfpu=fpv4-sp-d16 -Wa,-mimplicit-it=thumb -Og -ffunction-sections -fdata-sections -fsingle-precision-constant -Wall -Wno-format -Wdouble-promotion -MD -c -fno-isolate-erroneous-paths-dereference -DTARGET=MAX32660 -DMAX32660 -DTARGET_REV=0x4131 -g3 -ggdb -DDEBUG -Wall -DMXC_ASSERT_ENABLE -DLIB_BOARD -Werror=implicit-function-declaration -I. -Iinclude -IC:/MaximSDK/Libraries/Boards/MAX32660/EvKit_V1/Include -IC:/MaximSDK/Libraries/MiscDrivers -IC:/MaximSDK/Libraries/MiscDrivers/LED -IC:/MaximSDK/Libraries/MiscDrivers/PushButton -IC:/MaximSDK/Libraries/PeriphDrivers/Include/MAX32660/ -IC:/MaximSDK/Libraries/PeriphDrivers/Source/DMA -IC:/MaximSDK/Libraries/PeriphDrivers/Source/FLC -IC:/MaximSDK/Libraries/PeriphDrivers/Source/GPIO -IC:/MaximSDK/Libraries/PeriphDrivers/Source/I2C -IC:/MaximSDK/Libraries/PeriphDrivers/Source/ICC -IC:/MaximSDK/Libraries/PeriphDrivers/Source/LP -IC:/MaximSDK/Libraries/PeriphDrivers/Source/RTC -IC:/MaximSDK/Libraries/PeriphDrivers/Source/SPI -IC:/MaximSDK/Libraries/PeriphDrivers/Source/SPIMSS -IC:/MaximSDK/Libraries/PeriphDrivers/Source/TMR -IC:/MaximSDK/Libraries/PeriphDrivers/Source/UART -IC:/MaximSDK/Libraries/PeriphDrivers/Source/WDT -IC:/MaximSDK/Libraries/CMSIS/Device/Maxim/MAX32660/Include -IC:/MaximSDK/Libraries/CMSIS/5.9.0/Core/Include -o /c/Users/ashutoshtiwari/eclipse-workspace/cap_pwm/build/Interrupts.o Interrupts.c
+Interrupts.c:7:8: error: unknown type name 'gpio_cfg_t'
+    7 | static gpio_cfg_t gpio_cfg_tmr0 = {PORT_0, PIN_2, GPIO_FUNC_IN, GPIO_PAD_NONE};
+      |        ^~~~~~~~~~
+Interrupts.c:7:36: error: 'PORT_0' undeclared here (not in a function)
+    7 | static gpio_cfg_t gpio_cfg_tmr0 = {PORT_0, PIN_2, GPIO_FUNC_IN, GPIO_PAD_NONE};
+      |                                    ^~~~~~
+Interrupts.c:7:44: error: 'PIN_2' undeclared here (not in a function)
+    7 | static gpio_cfg_t gpio_cfg_tmr0 = {PORT_0, PIN_2, GPIO_FUNC_IN, GPIO_PAD_NONE};
+      |                                            ^~~~~
+Interrupts.c:7:44: warning: excess elements in scalar initializer
+Interrupts.c:7:44: note: (near initialization for 'gpio_cfg_tmr0')
+Interrupts.c:7:51: error: 'GPIO_FUNC_IN' undeclared here (not in a function); did you mean 'MXC_GPIO_FUNC_IN'?
+    7 | static gpio_cfg_t gpio_cfg_tmr0 = {PORT_0, PIN_2, GPIO_FUNC_IN, GPIO_PAD_NONE};
+      |                                                   ^~~~~~~~~~~~
+      |                                                   MXC_GPIO_FUNC_IN
+Interrupts.c:7:51: warning: excess elements in scalar initializer
+Interrupts.c:7:51: note: (near initialization for 'gpio_cfg_tmr0')
+Interrupts.c:7:65: error: 'GPIO_PAD_NONE' undeclared here (not in a function); did you mean 'MXC_GPIO_PAD_NONE'?
+    7 | static gpio_cfg_t gpio_cfg_tmr0 = {PORT_0, PIN_2, GPIO_FUNC_IN, GPIO_PAD_NONE};
+      |                                                                 ^~~~~~~~~~~~~
+      |                                                                 MXC_GPIO_PAD_NONE
+Interrupts.c:7:65: warning: excess elements in scalar initializer
+Interrupts.c:7:65: note: (near initialization for 'gpio_cfg_tmr0')
+Interrupts.c:8:8: error: unknown type name 'gpio_cfg_t'
+    8 | static gpio_cfg_t gpio_cfg_button = {PORT_0, PIN_3, GPIO_FUNC_IN, GPIO_PAD_NONE};
+      |        ^~~~~~~~~~
+Interrupts.c:8:46: error: 'PIN_3' undeclared here (not in a function)
+    8 | static gpio_cfg_t gpio_cfg_button = {PORT_0, PIN_3, GPIO_FUNC_IN, GPIO_PAD_NONE};
+      |                                              ^~~~~
+Interrupts.c:8:46: warning: excess elements in scalar initializer
+Interrupts.c:8:46: note: (near initialization for 'gpio_cfg_button')
+Interrupts.c:8:53: warning: excess elements in scalar initializer
+    8 | static gpio_cfg_t gpio_cfg_button = {PORT_0, PIN_3, GPIO_FUNC_IN, GPIO_PAD_NONE};
+      |                                                     ^~~~~~~~~~~~
+Interrupts.c:8:53: note: (near initialization for 'gpio_cfg_button')
+Interrupts.c:8:67: warning: excess elements in scalar initializer
+    8 | static gpio_cfg_t gpio_cfg_button = {PORT_0, PIN_3, GPIO_FUNC_IN, GPIO_PAD_NONE};
+      |                                                                   ^~~~~~~~~~~~~
+Interrupts.c:8:67: note: (near initialization for 'gpio_cfg_button')
+Interrupts.c: In function 'interrupt_init':
+Interrupts.c:20:5: error: implicit declaration of function 'GPIO_Config'; did you mean 'MXC_GPIO_Config'? [-Werror=implicit-function-declaration]
+   20 |     GPIO_Config(&gpio_cfg_tmr0);
+      |     ^~~~~~~~~~~
+      |     MXC_GPIO_Config
+Interrupts.c:21:5: error: implicit declaration of function 'GPIO_IntConfig'; did you mean 'MXC_GPIO_IntConfig'? [-Werror=implicit-function-declaration]
+   21 |     GPIO_IntConfig(&gpio_cfg_tmr0, GPIO_INT_EDGE, GPIO_INT_RISING);
+      |     ^~~~~~~~~~~~~~
+      |     MXC_GPIO_IntConfig
+Interrupts.c:21:36: error: 'GPIO_INT_EDGE' undeclared (first use in this function); did you mean 'MXC_GPIO_INT_EDGE'?
+   21 |     GPIO_IntConfig(&gpio_cfg_tmr0, GPIO_INT_EDGE, GPIO_INT_RISING);
+      |                                    ^~~~~~~~~~~~~
+      |                                    MXC_GPIO_INT_EDGE
+Interrupts.c:21:36: note: each undeclared identifier is reported only once for each function it appears in
+Interrupts.c:21:51: error: 'GPIO_INT_RISING' undeclared (first use in this function); did you mean 'MXC_GPIO_INT_RISING'?
+   21 |     GPIO_IntConfig(&gpio_cfg_tmr0, GPIO_INT_EDGE, GPIO_INT_RISING);
+      |                                                   ^~~~~~~~~~~~~~~
+      |                                                   MXC_GPIO_INT_RISING
+Interrupts.c:22:5: error: implicit declaration of function 'GPIO_RegisterCallback'; did you mean 'MXC_GPIO_RegisterCallback'? [-Werror=implicit-function-declaration]
+   22 |     GPIO_RegisterCallback(&gpio_cfg_tmr0, pwm_isr, NULL);
+      |     ^~~~~~~~~~~~~~~~~~~~~
+      |     MXC_GPIO_RegisterCallback
+Interrupts.c:23:5: error: implicit declaration of function 'GPIO_IntEnable' [-Werror=implicit-function-declaration]
+   23 |     GPIO_IntEnable(&gpio_cfg_tmr0);
+      |     ^~~~~~~~~~~~~~
+Interrupts.c: In function 'button_press_handler':
+Interrupts.c:38:9: error: implicit declaration of function 'GPIO_InGet'; did you mean 'MXC_GPIO_InGet'? [-Werror=implicit-function-declaration]
+   38 |     if (GPIO_InGet(&gpio_cfg_button)) {
+      |         ^~~~~~~~~~
+      |         MXC_GPIO_InGet
+cc1.exe: some warnings being treated as errors
+make: *** [C:/MaximSDK/Libraries/CMSIS/Device/Maxim/GCC/gcc.mk:381: /c/Users/ashutoshtiwari/eclipse-workspace/cap_pwm/build/Interrupts.o] Error 1
+"make ECLIPSE=1 all" terminated with exit code 2. Build might be incomplete.
+
+16:02:31 Build Failed. 15 errors, 6 warnings. (took 1s.211ms)
+

@@ -1,0 +1,69 @@
+
+
+/*Script - command_handler.c*/
+// by:-  Ashutosh tiwari
+
+
+#include "command_handler.h"
+#include "flash_manager.h"
+#include "crc.h"
+#include "partition_manager.h"
+#include "bootloader.h"
+#include <stdio.h>
+#include <string.h>
+
+void CommandHandler_Init(void) {
+	printf("[CommandHandler] Initialization complete.\n");
+
+}
+
+cmd_response_t CommandHandler_ProcessCommand(uint8_t command , const uint8_t* payload, uint32_t payload_length) {
+
+	switch (command) {
+	case CMD_START_UPDATE:
+		printf("[Command Handler] CMD_START_UPDATE received.\n");
+		Partition_Init();
+		return CMD_SUCCESS;
+
+    case CMD_ERASE_PARTITION:
+        printf("[Command Handler] CMD_ERASE_PARTITION received.\n");
+        if (Flash_ErasePage(PARTITION_INACTIVE_START) == FLASH_SUCCESS) {
+            return CMD_SUCCESS;
+        } else {
+            return CMD_ERR_FLASH_OP_FAILED;
+        }
+
+	case CMD_PROGRAM_PAGE:
+		printf("[Command Handler] CMD_PROGRAM_PAGE received.\n");
+		if (payload_length > PARTITION_SIZE) {
+			printf("[Command Handler] Error: Payload size exceeds partition size.\n");
+			return CMD_ERR_FLASH_OP_FAILED;
+		}
+		if (Flash_ProgramPage(PARTITION_INACTIVE_START, payload, payload_length) == FLASH_SUCCESS) {
+			return CMD_SUCCESS;
+		} else {
+			return CMD_ERR_FLASH_OP_FAILED;
+		}
+	case CMD_VALIDATE_CRC:
+		printf("[Command Handler] CMD_VALIDATE_CRC received.\n");
+		if (CRC_Validate(PARTITION_INACTIVE_START, PARTITION_SIZE)) {
+			return CMD_SUCCESS;
+		} else {
+			return CMD_ERR_CRC_MISMATCH;
+		}
+	case CMD_REBOOT:
+		printf("[Command Handler] CMD_REBOOT received.\n");
+		Bootloader_Rollback();
+		return CMD_SUCCESS;
+
+	default:
+		printf("[Command Handler] Unknown command received: 0x%02X\n", command);
+        return CMD_ERR_INVALID_COMMAND;
+
+	}
+}
+
+
+
+
+

@@ -1,0 +1,20 @@
+
+
+
+
+
+#ifndef FIRMWARE_DATA_H
+#define FIRMWARE_DATA_H
+
+#include <stdint.h>
+
+// Replace the below array with your actual "Hello World" firmware binary data
+const uint8_t firmware_data[] = {
+    0x81, 0x73, 0x0B, 0x93, 0x00, 0x2A, 0x27, 0xF0,
+    0x20, 0x03, 0xA2, 0x46, 0x07, 0x93, 0xC0, 0xF2,
+    // More bytes from the actual "Hello World" binary
+};
+
+const uint32_t firmware_size = sizeof(firmware_data);
+
+#endif

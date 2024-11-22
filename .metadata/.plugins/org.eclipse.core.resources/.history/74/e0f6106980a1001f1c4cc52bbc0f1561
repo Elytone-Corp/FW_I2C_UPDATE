@@ -1,0 +1,31 @@
+
+
+/*Script - flash_manager.c*/
+// by:-  Ashutosh tiwari
+
+
+
+#include "bootloader.h"
+#include "partition_manager.h"
+#include "flash_manager.h"
+#include "crc.h"
+#include <stdio.h>
+#include <string.h>
+
+static bootloader_state_t current_state = BOOTLOADER_IDLE;
+static bootloader_error_t last_error = BOOTLOADER_NO_ERROR;
+
+static void SetError(bootloader_error_t error) {
+	last_error = error;
+	current_state = BOOTLOADER_ERROR;
+
+}
+
+void Booltoader_Init(void) {
+	printf("[Bootloader] Initialization started ...\n");
+
+	Partition_Init();
+
+	ig
+}
+

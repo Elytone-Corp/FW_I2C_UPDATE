@@ -1,0 +1,101 @@
+#include "mxc_device.h"
+#include "mxc_sys.h"
+#include "nvic_table.h"
+#include "gpio.h"
+#include "tmr.h"
+#include "board.h"
+#include <stdio.h>
+
+// GPIO and Timer Definitions
+#define PWM_INPUT_PORT   MXC_GPIO0
+#define PWM_INPUT_PIN    MXC_GPIO_PIN_2
+#define PWM_TIMER        MXC_TMR0
+
+// Variables to hold captured times
+volatile uint32_t rising_edge_time = 0;
+volatile uint32_t falling_edge_time = 0;
+volatile uint32_t high_time = 0;
+volatile uint32_t period = 0;
+volatile uint8_t duty_cycle = 0;
+
+// Interrupt Service Routine for GPIO (PWM capture)
+void gpio_isr(void *cbdata) {
+    uint32_t current_time = MXC_TMR_GetCount(PWM_TIMER);
+
+    if (MXC_GPIO_InGet(PWM_INPUT_PORT, PWM_INPUT_PIN)) {
+        // Rising edge detected
+        rising_edge_time = current_time;
+    } else {
+        // Falling edge detected
+        falling_edge_time = current_time;
+        if (falling_edge_time >= rising_edge_time) {
+            high_time = falling_edge_time - rising_edge_time;
+        } else {
+            // Handle timer overflow
+            high_time = (0xFFFFFFFF - rising_edge_time) + falling_edge_time;
+        }
+        period = high_time * 4; // Assuming a 25% duty cycle minimum
+
+        // Calculate the duty cycle as a percentage
+        duty_cycle = (high_time * 100) / period;
+        printf("Duty Cycle: %u%%\n", duty_cycle);
+
+        // Classify based on duty cycle
+        if (duty_cycle <= 25) {
+            printf("Detected Duty Cycle: 25%%\n");
+        } else if (duty_cycle <= 50) {
+            printf("Detected Duty Cycle: 50%%\n");
+        } else if (duty_cycle <= 75) {
+            printf("Detected Duty Cycle: 75%%\n");
+        } else if (duty_cycle <= 90) {
+            printf("Detected Duty Cycle: 90%%\n");
+        } else {
+            printf("Invalid Duty Cycle Detected\n");
+        }
+    }
+
+    // Clear the interrupt flag
+    MXC_GPIO_ClearFlags(PWM_INPUT_PORT, PWM_INPUT_PIN);
+}
+
+// Initialize PWM capture
+void pwm_capture_init(void) {
+    // Configure GPIO for PWM input
+    mxc_gpio_cfg_t gpio_cfg = {
+        .port = PWM_INPUT_PORT,
+        .mask = PWM_INPUT_PIN,
+        .func = MXC_GPIO_FUNC_IN,
+        .pad = MXC_GPIO_PAD_PULL_UP,
+        .vssel = MXC_GPIO_VSSEL_VDDIOH
+    };
+    MXC_GPIO_Config(&gpio_cfg);
+    MXC_GPIO_RegisterCallback(&gpio_cfg, gpio_isr, NULL);
+    MXC_GPIO_IntConfig(&gpio_cfg, MXC_GPIO_INT_RISING);  // Enable rising edge interrupt
+    MXC_GPIO_IntConfig(&gpio_cfg, MXC_GPIO_INT_FALLING); // Enable falling edge interrupt
+    MXC_GPIO_EnableInt(PWM_INPUT_PORT, PWM_INPUT_PIN);
+    NVIC_EnableIRQ(GPIO0_IRQn);
+
+    // Initialize the timer in capture mode
+    mxc_tmr_cfg_t tmr_cfg = {
+        .pres = MXC_TMR_PRES_1,
+        .mode = MXC_TMR_MODE_CONTINUOUS,
+        .cmp_cnt = 0xFFFFFFFF,
+        .pol = 0
+    };
+    MXC_TMR_Init(PWM_TIMER, &tmr_cfg);
+    MXC_TMR_Start(PWM_TIMER);
+}
+
+// Main function
+int main(void) {
+    printf("PWM Capture Example\n");
+
+    // Initialize PWM capture
+    pwm_capture_init();
+
+    while (1) {
+        // Main loop - everything is handled in interrupts
+    }
+
+    return 0;
+}

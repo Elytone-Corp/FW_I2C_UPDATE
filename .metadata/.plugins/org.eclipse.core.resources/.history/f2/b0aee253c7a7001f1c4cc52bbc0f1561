@@ -1,0 +1,146 @@
+
+
+
+
+#include "i2c_driver.h"
+#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+
+// Slave I2C address
+#define SLAVE_I2C_ADDRESS 0x55
+
+// Bootloader commands
+#define CMD_START_UPDATE    0x01
+#define CMD_ERASE_PARTITION 0x02
+#define CMD_PROGRAM_PAGE    0x03
+#define CMD_VALIDATE_CRC    0x04
+#define CMD_MARK_ACTIVE     0x05
+#define CMD_REBOOT          0x06
+
+// Firmware update configuration
+#define CHUNK_SIZE 1024  // Chunk size for programming
+#define PARTITION_SIZE 0x1C000  // Inactive partition size
+
+// Simulated firmware data for testing (will be read from a file in a real system)
+uint8_t firmware_data[PARTITION_SIZE];
+
+// Function Prototypes
+bool Master_SendCommand(uint8_t command, const uint8_t* payload, uint32_t payload_size, uint8_t* response);
+bool Master_EnterBootloader(void);
+bool Master_ErasePartition(void);
+bool Master_ProgramFirmware(void);
+bool Master_ValidateCRC(void);
+bool Master_MarkActive(void);
+bool Master_RebootSlave(void);
+
+void FirmwareUpdateProcess(void);
+void LoadFirmwareBinary(const char* filename);
+
+int main(void) {
+    printf("[Master] Initializing I2C master...\n");
+    I2C_Master_Init(SLAVE_I2C_ADDRESS);
+
+    printf("[Master] Loading firmware binary...\n");
+    LoadFirmwareBinary("slave_firmware.bin");
+
+    printf("[Master] Starting firmware update process...\n");
+    FirmwareUpdateProcess();
+
+    printf("[Master] Firmware update process completed.\n");
+    I2C_Master_Deinit();
+
+    return 0;
+}
+
+// Firmware update process
+void FirmwareUpdateProcess(void) {
+    uint8_t response;
+
+    // Step 1: Enter Bootloader Mode
+    if (!Master_EnterBootloader()) {
+        printf("[Master] Error: Failed to enter bootloader mode.\n");
+        return;
+    }
+
+    // Step 2: Start Update
+    if (!Master_SendCommand(CMD_START_UPDATE, NULL, 0, &response) || response != 0x00) {
+        printf("[Master] Error: Failed to start update.\n");
+        return;
+    }
+
+    // Step 3: Erase Inactive Partition
+    if (!Master_ErasePartition()) {
+        printf("[Master] Error: Failed to erase partition.\n");
+        return;
+    }
+
+    // Step 4: Program Firmware
+    if (!Master_ProgramFirmware()) {
+        printf("[Master] Error: Firmware programming failed.\n");
+        return;
+    }
+
+    // Step 5: Validate Firmware CRC
+    if (!Master_ValidateCRC()) {
+        printf("[Master] Error: Firmware validation failed.\n");
+        return;
+    }
+
+    // Step 6: Mark Partition Active
+    if (!Master_MarkActive()) {
+        printf("[Master] Error: Failed to mark partition as active.\n");
+        return;
+    }
+
+    // Step 7: Reboot Slave
+    if (!Master_RebootSlave()) {
+        printf("[Master] Error: Failed to reboot slave.\n");
+        return;
+    }
+
+    printf("[Master] Firmware update completed successfully!\n");
+}
+
+// Load firmware binary into memory
+void LoadFirmwareBinary(const char* filename) {
+    FILE* file = fopen(filename, "rb");
+    if (!file) {
+        printf("[Master] Error: Unable to open firmware file: %s\n", filename);
+        return;
+    }
+
+    size_t bytes_read = fread(firmware_data, 1, PARTITION_SIZE, file);
+    fclose(file);
+
+    if (bytes_read != PARTITION_SIZE) {
+        printf("[Master] Warning: Firmware binary size mismatch. Read %zu bytes.\n", bytes_read);
+    } else {
+        printf("[Master] Firmware binary loaded successfully.\n");
+    }
+}
+
+// Send command to the slave
+bool Master_SendCommand(uint8_t command, const uint8_t* payload, uint32_t payload_size, uint8_t* response) {
+    uint8_t tx_buffer[CHUNK_SIZE + 1];  // Command + Payload
+    tx_buffer[0] = command;
+
+    if (payload && payload_size > 0) {
+        memcpy(&tx_buffer[1], payload, payload_size);
+    }
+
+    for (int attempt = 0; attempt < 3; attempt++) {
+        if (I2C_Send(tx_buffer, payload_size + 1) == I2C_SUCCESS) {
+            if (I2C_Receive(response, 1) == I2C_SUCCESS) {
+                return true;
+            }
+        }
+        printf("[Master] Retrying command: 0x%02X (Attempt %d)\n", command, attempt + 1);
+    }
+
+    printf("[Master] Failed to send command: 0x%02X\n", command);
+    return false;
+}
+
+// Implement other functions for the firmware update process (similar to before).
